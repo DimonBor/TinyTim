@@ -1,0 +1,8 @@
+/cmake-build-debug/
+/build/
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/TinyTim
+/Makefile
+/install_manifest.txt
