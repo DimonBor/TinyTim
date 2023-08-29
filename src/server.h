@@ -9,8 +9,8 @@
 
 #define BUFFER_SIZE 2048
 
-const char *head_200 = "HTTP/1.1 200 OK\r\nServer: TinyTim\r\nContent-Type: text/html\r\n\r\n";
-const char *head_404 = "HTTP/1.1 404 Not Found\r\nServer: TinyTim\r\nContent-Type: text/html\r\n\r\n";
+const char *head_200 = "HTTP/1.1 200 OK\r\nServer: TinyTim\r\n\r\n";
+const char *head_404 = "HTTP/1.1 404 Not Found\r\nServer: TinyTim\r\n\r\n";
 
 
 char LOG_BUFFER[BUFFER_SIZE];
