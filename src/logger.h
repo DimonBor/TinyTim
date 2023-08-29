@@ -13,8 +13,6 @@
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
 
-#include <time.h>
-
 void log_info (const char * message) {
     time_t now;
     pid_t tid;
@@ -34,7 +32,7 @@ void log_warning (const char * message) {
     tid = syscall(SYS_gettid);
     printf(
             ANSI_COLOR_YELLOW "%s [%d] [WARNING]: %s\n" ANSI_COLOR_RESET,
-            strtok(ctime(&now), "\n"), message
+            strtok(ctime(&now), "\n"), tid, message
             );
 }
 
@@ -46,6 +44,6 @@ void log_error (const char * message) {
     tid = syscall(SYS_gettid);
     printf(
             ANSI_COLOR_RED "%s [%d] [ERROR]: %s\n" ANSI_COLOR_RESET,
-            strtok(ctime(&now), "\n"), message
+            strtok(ctime(&now), "\n"), tid, message
             );
 }

@@ -90,7 +90,6 @@ const char *get_content_type(const char * extension) {
     if (!strcmp(extension, "css"))
         return "Content-Type: text/css\r\n\r\n";
     if (!strcmp(extension, "txt"))
-
         return "Content-Type: text/plain\r\n\r\n";
     return "Content-Type: application/octet-stream\r\n\r\n";
 }
