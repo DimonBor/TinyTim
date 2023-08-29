@@ -18,14 +18,14 @@ char BUFFER[BUFFER_SIZE];
 char *ROOT = TINYTIM_ROOT;
 
 
-void write_to_socket(int client_socket, const char * buffer) {
-    write(client_socket, buffer, strlen(buffer));
+void write_to_socket(int client_socket, const char * buffer, int buffer_size) {
+    write(client_socket, buffer, buffer_size);
 }
 
 
 void send_file(int client_socket, const char * location) {
     FILE *location_stream;
-    if ((location_stream = fopen(location, "r")) != NULL) {
+    if ((location_stream = fopen(location, "rb")) != NULL) {
 
         sprintf(
                 LOG_BUFFER,
@@ -34,10 +34,20 @@ void send_file(int client_socket, const char * location) {
         );
         log_info(LOG_BUFFER);
 
-        char RESPONSE_BODY_BUFFER[BUFFER_SIZE] = {0};
+        fseek(location_stream, 0, SEEK_END);
+        size_t file_size = ftell(location_stream);
+        rewind(location_stream);
 
-        while (fgets(RESPONSE_BODY_BUFFER, BUFFER_SIZE, location_stream) != NULL) {
-            write_to_socket(client_socket, RESPONSE_BODY_BUFFER);
+        if (file_size < BUFFER_SIZE) {
+            char RESPONSE_BODY_BUFFER[file_size] = {};
+            fread(RESPONSE_BODY_BUFFER, sizeof(char), file_size, location_stream);
+            write_to_socket(client_socket, RESPONSE_BODY_BUFFER, file_size);
+        }
+        else {
+            char RESPONSE_BODY_BUFFER[BUFFER_SIZE] = {0};
+            while (fread(RESPONSE_BODY_BUFFER, sizeof(char), BUFFER_SIZE, location_stream) == BUFFER_SIZE) {
+                write_to_socket(client_socket, RESPONSE_BODY_BUFFER, BUFFER_SIZE);
+            }
         }
     }
 }
@@ -67,7 +77,7 @@ void *client_handler(void *client_socket_ptr) {
 
         /* send 200 OK Head */
 
-        write_to_socket(client_socket, head_200);
+        write_to_socket(client_socket, head_200, strlen(head_200));
 
         sprintf(
                 LOG_BUFFER,
@@ -106,7 +116,7 @@ void *client_handler(void *client_socket_ptr) {
 
         /* send 404 NOT FOUND Head */
 
-        write_to_socket(client_socket, head_404);
+        write_to_socket(client_socket, head_404, strlen(head_404));
 
         sprintf(
                 LOG_BUFFER,
@@ -139,7 +149,7 @@ void *client_handler(void *client_socket_ptr) {
 
     /* send 200 OK Head */
 
-    write_to_socket(client_socket, head_200);
+    write_to_socket(client_socket, head_200, strlen(head_200));
 
     sprintf(
             LOG_BUFFER,
