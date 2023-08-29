@@ -34,14 +34,10 @@ void send_file(int client_socket, const char * location) {
         );
         log_info(LOG_BUFFER);
 
-        char *RESPONSE_BODY_BUFFER;
+        char RESPONSE_BODY_BUFFER[BUFFER_SIZE] = {0};
 
-        RESPONSE_BODY_BUFFER = malloc(sizeof(char) * BUFFER_SIZE);
-        size_t size = BUFFER_SIZE;
-
-        while (getline(&RESPONSE_BODY_BUFFER, &size, location_stream) > 0) {
+        while (fgets(RESPONSE_BODY_BUFFER, BUFFER_SIZE, location_stream) != NULL) {
             write_to_socket(client_socket, RESPONSE_BODY_BUFFER);
-            RESPONSE_BODY_BUFFER = NULL;
         }
     }
 }
@@ -61,7 +57,7 @@ void *client_handler(void *client_socket_ptr) {
             LOG_BUFFER,
             "Received request: %s",
             request_line
-    );
+            );
     log_info(LOG_BUFFER);
 
     char location[512] = {};
@@ -77,14 +73,14 @@ void *client_handler(void *client_socket_ptr) {
                 LOG_BUFFER,
                 "Sending Headers:\n%s",
                 head_200
-        );
+                );
         log_info(LOG_BUFFER);
 
         sprintf(
                 location,
                 "%sindex.html",
                 ROOT
-        );
+                );
 
         send_file(client_socket, location);
 
@@ -116,7 +112,7 @@ void *client_handler(void *client_socket_ptr) {
                 LOG_BUFFER,
                 "Sending Headers:\n%s",
                 head_404
-        );
+                );
         log_info(LOG_BUFFER);
 
         sprintf(
@@ -149,7 +145,7 @@ void *client_handler(void *client_socket_ptr) {
             LOG_BUFFER,
             "Sending Head:\n%s",
             head_200
-    );
+            );
     log_info(LOG_BUFFER);
 
     /* Send body */
