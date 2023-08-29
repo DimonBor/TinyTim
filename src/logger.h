@@ -14,23 +14,26 @@
 
 
 #include <time.h>
-#include <string.h>
 
 void log_info (const char * message) {
     time_t now;
+    pid_t tid;
     time(&now);
+    tid = syscall(SYS_gettid);
     printf(
-            ANSI_COLOR_GREEN "%s [INFO]: %s\n" ANSI_COLOR_RESET,
-            strtok(ctime(&now), "\n"), message
+            ANSI_COLOR_GREEN "%s [%d] [INFO]: %s\n" ANSI_COLOR_RESET,
+            strtok(ctime(&now), "\n"), tid, message
             );
 }
 
 
 void log_warning (const char * message) {
     time_t now;
+    pid_t tid;
     time(&now);
+    tid = syscall(SYS_gettid);
     printf(
-            ANSI_COLOR_YELLOW "%s [WARNING]: %s\n" ANSI_COLOR_RESET,
+            ANSI_COLOR_YELLOW "%s [%d] [WARNING]: %s\n" ANSI_COLOR_RESET,
             strtok(ctime(&now), "\n"), message
             );
 }
@@ -38,9 +41,11 @@ void log_warning (const char * message) {
 
 void log_error (const char * message) {
     time_t now;
+    pid_t tid;
     time(&now);
+    tid = syscall(SYS_gettid);
     printf(
-            ANSI_COLOR_RED "%s [ERROR]: %s\n" ANSI_COLOR_RESET,
+            ANSI_COLOR_RED "%s [%d] [ERROR]: %s\n" ANSI_COLOR_RESET,
             strtok(ctime(&now), "\n"), message
             );
 }

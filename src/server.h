@@ -8,14 +8,30 @@
 #endif //TINYTIM_SERVER_H
 
 #define BUFFER_SIZE 2048
-
-const char *head_200 = "HTTP/1.1 200 OK\r\nServer: TinyTim\r\n\r\n";
-const char *head_404 = "HTTP/1.1 404 Not Found\r\nServer: TinyTim\r\n\r\n";
+#define RESPONSE_BODY_BUFFER_SIZE 2048 // 128 KB
 
 
-char LOG_BUFFER[BUFFER_SIZE];
-char BUFFER[BUFFER_SIZE];
+const char *head_200 = "HTTP/1.1 200 OK\r\nServer: TinyTim\r\n";
+const char *head_404 = "HTTP/1.1 404 Not Found\r\nServer: TinyTim\r\n";
+
 char *ROOT = TINYTIM_ROOT;
+
+
+#include <string.h>
+
+char * strrev(char * str) {
+    if (!str || !*str)
+        return str;
+
+    for (int left = 0, right = strlen(str) - 1; left < right; left++, right--) {
+        char tempChar = str[left];
+        str[left] = str[right];
+        str[right] = tempChar;
+    }
+
+    return str;
+
+}
 
 
 void write_to_socket(int client_socket, const char * buffer, int buffer_size) {
@@ -24,6 +40,7 @@ void write_to_socket(int client_socket, const char * buffer, int buffer_size) {
 
 
 void send_file(int client_socket, const char * location) {
+    char LOG_BUFFER[BUFFER_SIZE];
     FILE *location_stream;
     if ((location_stream = fopen(location, "rb")) != NULL) {
 
@@ -44,16 +61,45 @@ void send_file(int client_socket, const char * location) {
             write_to_socket(client_socket, RESPONSE_BODY_BUFFER, file_size);
         }
         else {
-            char RESPONSE_BODY_BUFFER[BUFFER_SIZE] = {0};
-            while (fread(RESPONSE_BODY_BUFFER, sizeof(char), BUFFER_SIZE, location_stream) == BUFFER_SIZE) {
-                write_to_socket(client_socket, RESPONSE_BODY_BUFFER, BUFFER_SIZE);
+            int fetched_size;
+            char RESPONSE_BODY_BUFFER[RESPONSE_BODY_BUFFER_SIZE] = {0};
+            while ((fetched_size = fread(RESPONSE_BODY_BUFFER, sizeof(char), RESPONSE_BODY_BUFFER_SIZE, location_stream)) == RESPONSE_BODY_BUFFER_SIZE) {
+                write_to_socket(client_socket, RESPONSE_BODY_BUFFER, RESPONSE_BODY_BUFFER_SIZE);
+            }
+            if (fetched_size > 0 && fetched_size < RESPONSE_BODY_BUFFER_SIZE) {
+                write_to_socket(client_socket, RESPONSE_BODY_BUFFER, fetched_size);
             }
         }
     }
 }
 
 
+const char *get_content_type(const char * extension) {
+    if (!strcmp(extension, "html"))
+        return "Content-Type: text/html\r\n\r\n";
+    if (!strcmp(extension, "js"))
+        return "Content-Type: text/javascript\r\n\r\n";
+    if (!strcmp(extension, "json"))
+        return "Content-Type: application/json\r\n\r\n";
+    if (!strcmp(extension, "png"))
+        return "Content-Type: image/png\r\n\r\n";
+    if (!strcmp(extension, "jpg"))
+        return "Content-Type: image/jpeg\r\n\r\n";
+    if (!strcmp(extension, "svg"))
+        return "Content-Type: image/svg+xml\r\n\r\n";
+    if (!strcmp(extension, "css"))
+        return "Content-Type: text/css\r\n\r\n";
+    if (!strcmp(extension, "txt"))
+
+        return "Content-Type: text/plain\r\n\r\n";
+    return "Content-Type: application/octet-stream\r\n\r\n";
+}
+
+
 void *client_handler(void *client_socket_ptr) {
+    char BUFFER[BUFFER_SIZE];
+    char LOG_BUFFER[BUFFER_SIZE];
+
     int client_socket = *((int*)client_socket_ptr);
     free(client_socket_ptr);
 
@@ -75,22 +121,33 @@ void *client_handler(void *client_socket_ptr) {
 
     if (strcmp(location, "") == 0) {
 
-        /* send 200 OK Head */
-
-        write_to_socket(client_socket, head_200, strlen(head_200));
-
-        sprintf(
-                LOG_BUFFER,
-                "Sending Headers:\n%s",
-                head_200
-                );
-        log_info(LOG_BUFFER);
+        /* We are at index, send 200 OK Head */
 
         sprintf(
                 location,
                 "%sindex.html",
                 ROOT
-                );
+        );
+
+        char extension[10] = {0};
+        sscanf(strrev(location), "%[^.].%*[]", extension);
+
+        const char * content_type = get_content_type(strrev(extension));
+        char * head_200_type = malloc(strlen(head_200) + strlen(content_type));
+
+        strcpy(head_200_type, head_200);
+        strcat(head_200_type, content_type);
+
+        sprintf(
+                LOG_BUFFER,
+                "Sending Headers:\n%s",
+                head_200_type
+        );
+        log_info(LOG_BUFFER);
+
+        write_to_socket(client_socket, head_200_type, strlen(head_200_type));
+
+        strrev(location);
 
         send_file(client_socket, location);
 
@@ -116,20 +173,31 @@ void *client_handler(void *client_socket_ptr) {
 
         /* send 404 NOT FOUND Head */
 
-        write_to_socket(client_socket, head_404, strlen(head_404));
-
-        sprintf(
-                LOG_BUFFER,
-                "Sending Headers:\n%s",
-                head_404
-                );
-        log_info(LOG_BUFFER);
-
         sprintf(
                 location,
                 "%s404.html",
                 ROOT
-                );
+        );
+
+        char extension[10] = {};
+        sscanf(strrev(location), "%[^.].%*[]", extension);
+
+        const char * content_type = get_content_type(strrev(extension));
+        char * head_404_type = malloc(strlen(head_404) + strlen(content_type));
+
+        strcpy(head_404_type, head_404);
+        strcat(head_404_type, content_type);
+
+        sprintf(
+                LOG_BUFFER,
+                "Sending Headers:\n%s",
+                head_404_type
+        );
+        log_info(LOG_BUFFER);
+
+        write_to_socket(client_socket, head_404_type, strlen(head_404_type));
+
+        strrev(location);
 
         send_file(client_socket, location);
 
@@ -147,18 +215,29 @@ void *client_handler(void *client_socket_ptr) {
         log_info(LOG_BUFFER);
     }
 
-    /* send 200 OK Head */
+    /* Sending exact file, send 200 OK Head */
 
-    write_to_socket(client_socket, head_200, strlen(head_200));
+    char extension[10] = {};
+    sscanf(strrev(location), "%[^.].%*[]", extension);
+
+    const char * content_type = get_content_type(strrev(extension));
+    char * head_200_type = malloc(strlen(head_200) + strlen(content_type));
+
+    strcpy(head_200_type, head_200);
+    strcat(head_200_type, content_type);
 
     sprintf(
             LOG_BUFFER,
-            "Sending Head:\n%s",
-            head_200
-            );
+            "Sending Headers:\n%s",
+            head_200_type
+    );
     log_info(LOG_BUFFER);
 
+    write_to_socket(client_socket, head_200_type, strlen(head_200_type));
+
     /* Send body */
+    strrev(location);
+
     send_file(client_socket, location);
 
     /* Close connection */

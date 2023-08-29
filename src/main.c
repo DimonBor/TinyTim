@@ -4,11 +4,14 @@
 
 
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <libconfig.h>
 #include <sys/socket.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
 #include <netinet/in.h>
 
 
