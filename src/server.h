@@ -8,7 +8,7 @@
 #endif //TINYTIM_SERVER_H
 
 #define BUFFER_SIZE 2048
-#define RESPONSE_BODY_BUFFER_SIZE 2048 // 128 KB
+#define RESPONSE_BODY_BUFFER_SIZE 2048
 
 
 const char *head_200 = "HTTP/1.1 200 OK\r\nServer: TinyTim\r\n";
