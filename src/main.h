@@ -8,12 +8,6 @@
 #endif //TINYTIM_MAIN_H
 
 
-#ifndef TINYTIM_WORKERS
-#define TINYTIM_WORKERS 10
-
-#endif //TINYTIM_WORKERS
-
-
 #ifndef TINYTIM_PORT
 #define TINYTIM_PORT 80
 
@@ -31,3 +25,8 @@
 
 #endif //TINYTIM_CONF_FILE_NAME
 
+
+#ifndef TINYTIM_TRY_FILES
+#define TINYTIM_TRY_FILES "index.html"
+
+#endif //TINYTIM_TRY_FILES

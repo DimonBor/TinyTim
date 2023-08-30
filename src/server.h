@@ -15,9 +15,8 @@ const char *head_200 = "HTTP/1.1 200 OK\r\nServer: TinyTim\r\n";
 const char *head_404 = "HTTP/1.1 404 Not Found\r\nServer: TinyTim\r\n";
 
 char *ROOT = TINYTIM_ROOT;
+char *TRY_FILES = TINYTIM_TRY_FILES;
 
-
-#include <string.h>
 
 char * strrev(char * str) {
     if (!str || !*str)
@@ -30,7 +29,24 @@ char * strrev(char * str) {
     }
 
     return str;
+}
 
+
+char *find_file() {
+    char * files = malloc(strlen(TRY_FILES));
+    strcpy(files, TRY_FILES);
+    char * try_file = strtok(files, " ");
+    char * try_file_full_path = malloc(sizeof(char) * BUFFER_SIZE);
+    sprintf(try_file_full_path, "%s%s", ROOT, try_file);
+
+    while (try_file != NULL) {
+        FILE *location_stream;
+        if((location_stream = fopen(try_file_full_path, "r")) != NULL) return try_file_full_path;
+        try_file = strtok(NULL, " ");
+        sprintf(try_file_full_path, "%s%s", ROOT, try_file);
+    }
+
+    return NULL;
 }
 
 
@@ -48,7 +64,7 @@ void send_file(int client_socket, const char * location) {
                 LOG_BUFFER,
                 "Sending Body: %s",
                 location
-        );
+                );
         log_info(LOG_BUFFER);
 
         fseek(location_stream, 0, SEEK_END);
@@ -74,7 +90,12 @@ void send_file(int client_socket, const char * location) {
 }
 
 
-const char *get_content_type(const char * extension) {
+const char *get_content_type(char * location) {
+    char extension[10] = {};
+    sscanf(strrev(location), "%[^.].%*[]", extension);
+    strrev(extension);
+    strrev(location);
+
     if (!strcmp(extension, "html"))
         return "Content-Type: text/html\r\n\r\n";
     if (!strcmp(extension, "js"))
@@ -116,44 +137,7 @@ void *client_handler(void *client_socket_ptr) {
     log_info(LOG_BUFFER);
 
     char location[512] = {};
-    sscanf(request_line, "GET /%[^ ]", location);
-
-    if (strcmp(location, "") == 0) {
-
-        /* We are at index, send 200 OK Head */
-
-        sprintf(
-                location,
-                "%sindex.html",
-                ROOT
-        );
-
-        char extension[10] = {0};
-        sscanf(strrev(location), "%[^.].%*[]", extension);
-
-        const char * content_type = get_content_type(strrev(extension));
-        char * head_200_type = malloc(strlen(head_200) + strlen(content_type));
-
-        strcpy(head_200_type, head_200);
-        strcat(head_200_type, content_type);
-
-        sprintf(
-                LOG_BUFFER,
-                "Sending Headers:\n%s",
-                head_200_type
-        );
-        log_info(LOG_BUFFER);
-
-        write_to_socket(client_socket, head_200_type, strlen(head_200_type));
-
-        strrev(location);
-
-        send_file(client_socket, location);
-
-        /* Close connection */
-        close(client_socket);
-        return NULL;
-    }
+    sscanf(request_line, "GET /%[^ ?][ ?]%*[]", location);
 
     char *tmp = strdup(location);
     strcpy(location, ROOT);
@@ -162,47 +146,71 @@ void *client_handler(void *client_socket_ptr) {
 
     /* Check if file exists */
     FILE *location_stream;
-    if((location_stream = fopen(location, "r")) == NULL) {
+
+    if((location_stream = fopen(location, "r+")) == NULL) {
         sprintf(
                 LOG_BUFFER,
-                "Can not open location: %s",
+                "Can not open file: \"%s\"...",
                 location
                 );
         log_warning(LOG_BUFFER);
 
-        /* send 404 NOT FOUND Head */
+        char location[512] = {};
+        char * try_file;
 
-        sprintf(
-                location,
-                "%s404.html",
-                ROOT
-        );
+        if ((try_file = find_file()) != NULL) {
 
-        char extension[10] = {};
-        sscanf(strrev(location), "%[^.].%*[]", extension);
+            const char * content_type = get_content_type(try_file);
+            char * head_200_type = malloc(strlen(head_200) + strlen(content_type));
 
-        const char * content_type = get_content_type(strrev(extension));
-        char * head_404_type = malloc(strlen(head_404) + strlen(content_type));
+            strcpy(head_200_type, head_200);
+            strcat(head_200_type, content_type);
 
-        strcpy(head_404_type, head_404);
-        strcat(head_404_type, content_type);
+            sprintf(
+                    LOG_BUFFER,
+                    "Sending Headers:\n%s",
+                    head_200_type
+                    );
+            log_info(LOG_BUFFER);
 
-        sprintf(
-                LOG_BUFFER,
-                "Sending Headers:\n%s",
-                head_404_type
-        );
-        log_info(LOG_BUFFER);
+            write_to_socket(client_socket, head_200_type, strlen(head_200_type));
+            send_file(client_socket, try_file);
 
-        write_to_socket(client_socket, head_404_type, strlen(head_404_type));
+            /* Close connection */
+            close(client_socket);
+            return NULL;
 
-        strrev(location);
+        }
+        else {
+            /* send 404 NOT FOUND Head */
 
-        send_file(client_socket, location);
+            sprintf(
+                    location,
+                    "%s404.html",
+                    ROOT
+                    );
 
-        /* Close connection */
-        close(client_socket);
-        return NULL;
+            const char * content_type = get_content_type(location);
+            char * head_404_type = malloc(strlen(head_404) + strlen(content_type));
+
+            strcpy(head_404_type, head_404);
+            strcat(head_404_type, content_type);
+
+            sprintf(
+                    LOG_BUFFER,
+                    "Sending Headers:\n%s",
+                    head_404_type
+                    );
+            log_info(LOG_BUFFER);
+
+            write_to_socket(client_socket, head_404_type, strlen(head_404_type));
+            send_file(client_socket, location);
+
+            /* Close connection */
+            close(client_socket);
+            return NULL;
+        }
+
 
     }
     else {
@@ -216,10 +224,7 @@ void *client_handler(void *client_socket_ptr) {
 
     /* Sending exact file, send 200 OK Head */
 
-    char extension[10] = {};
-    sscanf(strrev(location), "%[^.].%*[]", extension);
-
-    const char * content_type = get_content_type(strrev(extension));
+    const char * content_type = get_content_type(location);
     char * head_200_type = malloc(strlen(head_200) + strlen(content_type));
 
     strcpy(head_200_type, head_200);
@@ -233,10 +238,6 @@ void *client_handler(void *client_socket_ptr) {
     log_info(LOG_BUFFER);
 
     write_to_socket(client_socket, head_200_type, strlen(head_200_type));
-
-    /* Send body */
-    strrev(location);
-
     send_file(client_socket, location);
 
     /* Close connection */

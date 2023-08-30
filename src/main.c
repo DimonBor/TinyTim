@@ -30,7 +30,7 @@ int main (int argc, char *argv[]) {
     config_t cfg;
     int TMP_INT;
     const char *TMP_STRING;
-    char *LOG_BUFFER = malloc(sizeof(char)*2048);
+    char *LOG_BUFFER = malloc(sizeof(char)*BUFFER_SIZE);
 
     log_info(
             "Starting TinyTim HTTP server..."
@@ -68,6 +68,10 @@ int main (int argc, char *argv[]) {
             ROOT = malloc(strlen(TMP_STRING)+1);
             strcpy(ROOT, TMP_STRING);
         }
+        if (config_lookup_string(&cfg, "try_files", &TMP_STRING)) {
+            TRY_FILES = malloc(strlen(TMP_STRING)+1);
+            strcpy(TRY_FILES, TMP_STRING);
+        }
         config_destroy(&cfg);
     }
 
@@ -89,19 +93,20 @@ int main (int argc, char *argv[]) {
     /* Configuration summary */
     sprintf(
             LOG_BUFFER,
-            "Current configuration:\n\tUsing config file: %s\n\tPort: %d\n\tRoot: %s\n",
-            CONF_FILE_NAME, PORT, ROOT
+            "Current configuration:\n\tUsing config file: %s\n\tPort: %d\n\tRoot: %s\n\tTry files: %s\n",
+            CONF_FILE_NAME, PORT, ROOT, TRY_FILES
             );
     log_info(LOG_BUFFER);
 
     /* Starting server */
 
-    int server_socket, client_socket;
+    int server_socket, client_socket, optval=1;;
     struct sockaddr_in server_addr, client_addr;
 
     socklen_t client_addr_len = sizeof(client_addr);
     server_socket = socket(AF_INET, SOCK_STREAM, 0);
     memset(&server_addr, 0, sizeof(server_addr));
+    setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval);
 
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
@@ -122,7 +127,7 @@ int main (int argc, char *argv[]) {
             LOG_BUFFER,
             "Successfully bind to port %d",
             PORT
-    );
+            );
     log_info(LOG_BUFFER);
 
     while (1) {
